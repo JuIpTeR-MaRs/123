@@ -19,7 +19,7 @@ mysql:
   port: "3306"
   database: "shop_db"
   user: "root"
-  Password: "123"
+  Password: "84916325"
   maxIdleConns: 10 # 连接池最大空闲连接数
   maxOpenConns: 50 # 连接池最大打开连接数
 #

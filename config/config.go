@@ -83,7 +83,7 @@ var (
 func Init() {
 	// todo read the configs.json file
 	v := viper.New()
-	v.SetConfigFile("D:/go/Godev/shop_server/config/config.yaml")
+	v.SetConfigFile("C:/Users/30408/Desktop/123/config/config.yaml")
 	err := v.ReadInConfig()
 	if err != nil {
 		// todo log error to be handle with unity

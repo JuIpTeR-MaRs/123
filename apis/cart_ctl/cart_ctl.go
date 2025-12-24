@@ -16,7 +16,7 @@ func AddToCart(c *gin.Context) {
 	}
 	id, err := logics.AddToCart(req)
 	if err != nil {
-		nets.Fail(c, 500, "添加到购物车失败: "+err.Error())
+		nets.Fail(c, 500, "添加失败: "+err.Error())
 		return
 	}
 	nets.Success(c, gin.H{"cart_item_id": id})
@@ -30,14 +30,14 @@ func RemoveFromCart(c *gin.Context) {
 	}
 	success, err := logics.RemoveFromCart(req.ProductID)
 	if err != nil {
-		nets.Fail(c, 500, "从购物车移除商品失败: "+err.Error())
+		nets.Fail(c, 500, "移除失败: "+err.Error())
 		return
 	}
 	if !success {
-		nets.Fail(c, 500, "从购物车移除商品失败")
+		nets.Fail(c, 500, "移除失败")
 		return
 	}
-	nets.Success(c, gin.H{"msg": "从购物车移除商品成功"})
+	nets.Success(c, gin.H{"msg": "移除成功"})
 }
 
 func GetCartItems(c *gin.Context) {
@@ -48,7 +48,7 @@ func GetCartItems(c *gin.Context) {
 	}
 	cartItems, err := logics.GetCartItems(req.UserID)
 	if err != nil {
-		nets.Fail(c, 500, "获取购物车商品失败: "+err.Error())
+		nets.Fail(c, 500, "获取失败: "+err.Error())
 		return
 	}
 	c.JSON(200, gin.H{"cart_list": cartItems})
