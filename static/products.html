@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>商品列表</title>
+</head>
+<body>
+  <h1>商品列表</h1>
+  <div>
+    <button id="load">加载商品</button>
+    <label style="margin-left:12px">userId: <input id="userIdInput" value="1" style="width:60px"/></label>
+    <button id="addBtn" style="margin-left:12px">添加商品</button>
+    <button id="cartBtn" style="margin-left:12px">购物车</button>
+    <button id="ordersBtn" style="margin-left:12px">订单</button>
+    <div id="status" style="color:green;margin-top:8px"></div>
+    <div id="list"></div>
+  </div>
+<script>
+async function loadProducts() {
+  const status = document.getElementById('status');
+  status.style.color = 'green';
+  status.textContent = '加载中...';
+  try {
+    // 后端绑定使用 page_num / page_size（下划线）
+    const res = await fetch('/product/getproduct?page_num=1&page_size=20');
+    const text = await res.text();
+    let j = null;
+    try {
+      j = JSON.parse(text);
+    } catch (e) {
+      // 如果解析失败，显示原始响应便于调试
+      status.style.color = 'red';
+      status.textContent = '响应不是有效 JSON：' + (text.slice(0, 200) || text);
+      console.error('Invalid JSON response:', text);
+      return;
+    }
+    // 支持后端直接返回 {product_list: [...]} 或统一响应 {code,msg,data}
+    const list = j.product_list || (j.data && j.data.product_list) || [];
+    const d = document.getElementById('list');
+    d.innerHTML = '';
+    if (!Array.isArray(list) || list.length === 0) {
+      status.style.color = 'gray';
+      status.textContent = '暂无商品或请求参数错误';
+      return;
+    }
+    status.style.color = 'green';
+    status.textContent = '加载完成，共 ' + list.length + ' 项';
+    list.forEach(p => {
+      const el = document.createElement('div');
+      const pid = p.id || p.ProductID || '';
+      const pname = p.name || p.ProductName || p.Name || '';
+      const price = p.price || p.Price || '';
+      el.innerHTML = `<strong>${pid} - ${pname}</strong> ￥${price} `;
+      // 数量输入
+      const qty = document.createElement('input'); qty.type = 'number'; qty.value = 1; qty.min = 1; qty.style.width='60px'; qty.style.marginLeft='8px';
+      // 加入购物车按钮
+      const addBtn = document.createElement('button'); addBtn.textContent = '加入购物车'; addBtn.style.marginLeft='8px';
+      addBtn.addEventListener('click', async ()=>{
+        const userId = parseInt(document.getElementById('userIdInput').value) || 0;
+        const payload = { user_id: userId, product_id: parseInt(pid), quantity: parseInt(qty.value) };
+        try {
+          const r = await fetch('/carts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const t = await r.text();
+          status.style.color = r.ok ? 'green' : 'red';
+          status.textContent = (r.ok ? '加入成功: ' : '加入失败: ') + t.slice(0,200);
+        } catch (err) {
+          status.style.color = 'red'; status.textContent = '请求失败: '+err.message;
+        }
+      });
+      el.appendChild(qty);
+      el.appendChild(addBtn);
+      d.appendChild(el);
+    });
+  } catch (err) {
+    status.style.color = 'red';
+    status.textContent = '请求失败: ' + err.message;
+  }
+}
+
+// 自动在页面加载时调用
+window.addEventListener('DOMContentLoaded', () => {
+  loadProducts();
+  // 保持按钮可用以便手动重试
+  document.getElementById('load').addEventListener('click', loadProducts);
+  document.getElementById('addBtn').addEventListener('click', ()=>{
+    window.location.href = '/static/addproduct.html';
+  });
+  document.getElementById('cartBtn').addEventListener('click', ()=>{
+    window.location.href = '/static/cart.html';
+  });
+  document.getElementById('ordersBtn').addEventListener('click', ()=>{
+    window.location.href = '/static/orders.html';
+  });
+});
+</script>
+</body>
+</html>

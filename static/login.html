@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>登录</title>
+</head>
+<body>
+  <h1>登录</h1>
+  <form id="loginForm">
+    <label>用户名: <input name="username" /></label><br />
+    <label>密码: <input type="password" name="password" /></label><br />
+    <button type="submit">登录</button>
+  </form>
+  <pre id="result"></pre>
+<script>
+const form = document.getElementById('loginForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const res = await fetch('/user/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const ctype = res.headers.get('content-type') || '';
+    if (ctype.includes('application/json')) {
+      const j = await res.json();
+      if (j.code === 200) {
+        document.getElementById('result').textContent = '登录成功，正在跳转商品列表...';
+        setTimeout(() => { window.location.href = '/static/products.html'; }, 600);
+        return;
+      }
+      document.getElementById('result').textContent = j.msg || JSON.stringify(j, null, 2);
+    } else {
+      const txt = await res.text();
+      document.getElementById('result').textContent = txt;
+    }
+  } catch (err) {
+    document.getElementById('result').textContent = '请求失败: ' + err.message;
+  }
+});
+</script>
+</body>
+</html>

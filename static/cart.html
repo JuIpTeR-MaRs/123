@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>购物车</title>
+</head>
+<body>
+  <h1>购物车</h1>
+  <p>购物车测试与管理</p>
+  <div>
+    <label>userId: <input id="userId" value="1" style="width:80px"/></label>
+    <button id="refresh">刷新购物车</button>
+    <button id="clear" style="margin-left:8px">清空购物车</button>
+    <button id="backToProducts" style="margin-left:8px">返回商品列表</button>
+    <div id="msg" style="color:green;margin-top:8px"></div>
+  </div>
+  <div id="cartList" style="margin-top:12px"></div>
+
+<script>
+async function refresh() {
+  const uid = parseInt(document.getElementById('userId').value) || 0;
+  const msg = document.getElementById('msg');
+  msg.style.color='green'; msg.textContent='加载中...';
+  try {
+    const r = await fetch('/carts/' + uid);
+    const t = await r.text();
+    let j = null;
+    try { j = JSON.parse(t); } catch(e){ msg.style.color='red'; msg.textContent='响应不是JSON: '+t.slice(0,200); return; }
+    const list = j.cart_list || [];
+    const wrap = document.getElementById('cartList'); wrap.innerHTML='';
+    if(!Array.isArray(list) || list.length===0){ msg.style.color='gray'; msg.textContent='购物车为空'; return; }
+    msg.style.color='green'; msg.textContent='共 '+list.length+' 项';
+    list.forEach(item=>{
+      const el = document.createElement('div');
+      el.style.marginBottom='8px';
+      const id = item.id || item.ID || item.cart_item_id || '';
+      const pid = item.product_id || item.ProductID || '';
+      const name = item.product_name || item.name || '';
+      const qty = item.quantity || 1;
+      el.innerHTML = `<strong>${name}</strong> (pid:${pid}) `;
+      const qtyInput = document.createElement('input'); qtyInput.type='number'; qtyInput.value=qty; qtyInput.min=1; qtyInput.style.width='60px'; qtyInput.style.marginLeft='8px';
+      const upd = document.createElement('button'); upd.textContent='更新数量'; upd.style.marginLeft='8px';
+      upd.addEventListener('click', async ()=>{
+        try{
+          const res = await fetch('/carts/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({quantity: parseInt(qtyInput.value)}) });
+          const txt = await res.text();
+          msg.style.color = res.ok? 'green':'red'; msg.textContent = (res.ok? '更新成功: ':'更新失败: ') + txt.slice(0,200);
+          refresh();
+        }catch(err){ msg.style.color='red'; msg.textContent='请求失败: '+err.message }
+      });
+      const del = document.createElement('button'); del.textContent='删除'; del.style.marginLeft='8px';
+      del.addEventListener('click', async ()=>{
+        try{
+          const res = await fetch('/carts/'+id, { method:'DELETE' });
+          const txt = await res.text();
+          msg.style.color = res.ok? 'green':'red'; msg.textContent = (res.ok? '删除成功: ':'删除失败: ') + txt.slice(0,200);
+          refresh();
+        }catch(err){ msg.style.color='red'; msg.textContent='请求失败: '+err.message }
+      });
+      el.appendChild(qtyInput); el.appendChild(upd); el.appendChild(del);
+      // 下单按钮
+      const orderBtn = document.createElement('button'); orderBtn.textContent='下单'; orderBtn.style.marginLeft='8px';
+      orderBtn.addEventListener('click', async ()=>{
+        try{
+          const receiver_name = prompt('收件人姓名', '测试用户');
+          if(!receiver_name) return;
+          const receiver_phone = prompt('收件人电话', '13800000000');
+          if(!receiver_phone) return;
+          const receiver_address = prompt('收件地址', '示例地址');
+          if(!receiver_address) return;
+          // 构造最小订单请求；后端会根据 product_id 查询价格和名称
+          const payload = {
+            user_id: parseInt(uid),
+            product_id: parseInt(pid),
+            quantity: parseInt(qtyInput.value),
+            receiver_name, receiver_phone, receiver_address
+          };
+          const res = await fetch('/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const txt = await res.text();
+          if(!res.ok){ msg.style.color='red'; msg.textContent='下单失败: '+txt.slice(0,200); return; }
+          msg.style.color='green'; msg.textContent='下单成功: '+txt.slice(0,200);
+          // 删除购物车项
+          await fetch('/carts/'+id, { method:'DELETE' });
+          // 跳转到订单页面并携带 userId
+          window.location.href = '/static/orders.html?userId=' + uid;
+        }catch(err){ msg.style.color='red'; msg.textContent='请求失败: '+err.message }
+      });
+      el.appendChild(orderBtn);
+      wrap.appendChild(el);
+    });
+  } catch(err){ msg.style.color='red'; msg.textContent='请求失败: '+err.message }
+}
+
+document.getElementById('refresh').addEventListener('click', ()=>refresh());
+document.getElementById('clear').addEventListener('click', async ()=>{
+  const uid = parseInt(document.getElementById('userId').value) || 0;
+  const msg = document.getElementById('msg');
+  try{
+    const r = await fetch('/carts/clear/'+uid, { method:'DELETE' });
+    const t = await r.text();
+    msg.style.color = r.ok? 'green':'red'; msg.textContent = (r.ok? '清空成功: ':'清空失败: ') + t.slice(0,200);
+    refresh();
+  }catch(err){ msg.style.color='red'; msg.textContent='请求失败: '+err.message }
+});
+
+document.getElementById('backToProducts').addEventListener('click', ()=>{
+  const uid = parseInt(document.getElementById('userId').value) || 0;
+  // 如果有 userId 参数，带上，方便返回时保持登录态
+  window.location.href = '/static/products.html' + (uid? ('?userId='+uid): '');
+});
+
+// 页面加载自动刷新
+window.addEventListener('DOMContentLoaded', ()=>{ refresh(); });
+</script>
+</body>
+</html>

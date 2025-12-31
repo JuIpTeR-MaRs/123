@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>订单列表</title>
+  <style> .order { margin-bottom:12px; padding:8px; border:1px solid #ddd } </style>
+</head>
+<body>
+  <h1>订单列表</h1>
+  <div>
+    <label>userId: <input id="userId" value="1" style="width:80px"/></label>
+    <button id="refresh">刷新订单</button>
+    <button id="backToProducts" style="margin-left:8px">返回商品列表</button>
+    <div id="msg" style="color:green;margin-top:8px"></div>
+  </div>
+  <div id="orders" style="margin-top:12px"></div>
+
+<script>
+function getQueryParam(name){ const u = new URL(window.location.href); return u.searchParams.get(name); }
+async function loadOrders(){
+  const defaultUid = parseInt(getQueryParam('userId')) || parseInt(document.getElementById('userId').value) || 1;
+  document.getElementById('userId').value = defaultUid;
+  const msg = document.getElementById('msg'); msg.style.color='green'; msg.textContent='加载中...';
+  try{
+    const res = await fetch('/orders/user/' + defaultUid + '?page_num=1&page_size=50');
+    const txt = await res.text();
+    let j = null; try{ j = JSON.parse(txt) }catch(e){ msg.style.color='red'; msg.textContent='响应非JSON: '+txt.slice(0,200); return }
+    // 支持两种返回格式：{order_list: [...] } 或 {code,msg,data:{order_list: [...]}}
+    const list = j.order_list || (j.data && j.data.order_list) || [];
+    // 调试信息：在控制台打印完整响应
+    console.debug('orders response parsed:', j);
+    document.getElementById('msg').dataset.raw = JSON.stringify(j).slice(0,1000);
+    const wrap = document.getElementById('orders'); wrap.innerHTML='';
+    if(!Array.isArray(list) || list.length===0){ msg.style.color='gray'; msg.textContent='无订单 — 响应预览: '+(document.getElementById('msg').dataset.raw||''); return }
+    msg.style.color='green'; msg.textContent='共 '+list.length+' 个订单';
+    list.forEach(o=>{
+      const el = document.createElement('div'); el.className='order';
+        el.innerHTML = `<div><strong>订单号：</strong>${o.order_no || o.OrderNo || ''} &nbsp; <strong>商品：</strong>${o.product_name || o.ProductName || ''}</div>`+
+                       `<div><strong>数量：</strong>${o.quantity || o.Quantity} &nbsp; <strong>单价：</strong>${o.unit_price || o.UnitPrice}</div>`+
+                       `<div><strong>总计：</strong>${o.total_amount || o.TotalAmount} &nbsp; <strong>状态：</strong>${o.status || o.Status}</div>`+
+                       `<div><strong>收货：</strong>${o.receiver_name||''} ${o.receiver_phone||''} ${o.receiver_address||''}</div>`;
+        // 评论按钮
+        const commentBtn = document.createElement('button');
+        commentBtn.textContent = '评论';
+        commentBtn.style.marginLeft = '8px';
+        commentBtn.addEventListener('click', async ()=>{
+          const rating = prompt('评分 (1-5)', '5');
+          if (rating === null) return;
+          const comment = prompt('评价内容', '不错');
+          if (comment === null) return;
+          const payload = {
+            user_id: parseInt(document.getElementById('userId').value) || 1,
+            product_id: o.product_id || o.productId || o.ProductID || o.ProductId || 0,
+            rating: parseInt(rating),
+            comment: comment
+          };
+          try{
+            const res = await fetch('/reviews', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const txt = await res.text();
+            alert((res.ok? '评论成功: ' : '评论失败: ') + txt.slice(0,200));
+          }catch(err){ alert('请求失败: '+err.message) }
+        });
+        el.appendChild(commentBtn);
+        wrap.appendChild(el);
+    });
+  }catch(err){ msg.style.color='red'; msg.textContent='请求失败: '+err.message }
+}
+
+document.getElementById('refresh').addEventListener('click', ()=>loadOrders());
+document.getElementById('backToProducts').addEventListener('click', ()=>{ window.location.href = '/static/products.html'; });
+window.addEventListener('DOMContentLoaded', ()=>{ loadOrders(); });
+</script>
+</body>
+</html>
