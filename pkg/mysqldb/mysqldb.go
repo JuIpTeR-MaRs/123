@@ -3,6 +3,7 @@ package mysqldb
 import (
 	"database/sql"
 	"shop_server/config"
+	"shop_server/internal/models"
 	"shop_server/pkg/logs"
 
 	//"github.com/go-sql-driver/mysql"
@@ -34,7 +35,8 @@ func InitMysql() {
 	c := &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
+			// use plural table names to match provided SQL in sqls/shop.sql
+			SingularTable: false,
 		},
 	}
 
@@ -59,6 +61,11 @@ func InitMysql() {
 	MysqlDB.SetConnMaxIdleTime(2 * time.Minute)
 	MysqlDB.SetMaxIdleConns(config.CONFIG.Mysql.MaxIdleConns)
 	MysqlDB.SetMaxOpenConns(config.CONFIG.Mysql.MaxOpenConns)
+
+	// 自动迁移常用模型，确保缺失表被创建（不会修改已有列的类型）
+	if err := Mysql.AutoMigrate(&models.Product{}, &models.CartItem{}, &models.Order{}); err != nil {
+		logs.ZapLogger.Error("自动迁移失败：" + err.Error())
+	}
 }
 
 func CloseMysql() {

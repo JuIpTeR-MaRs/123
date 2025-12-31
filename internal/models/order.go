@@ -15,3 +15,8 @@ type Order struct {
 	ReceiverAddress string  `gorm:"not null" json:"receiver_address"`
 	Status          string  `gorm:"not null;default:'0'" json:"status"` //0:待付款 1:待发货 2:待收货 3:已完成
 }
+
+// TableName 指定 Order 使用现有的 order 表（注意：该表名为保留词 order，使用时请小心）
+func (Order) TableName() string {
+	return "order"
+}

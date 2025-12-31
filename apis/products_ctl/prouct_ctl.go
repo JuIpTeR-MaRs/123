@@ -84,6 +84,7 @@ func GetProductList(c *gin.Context) {
 	productList, err := logics.GetProductList(req.PageNum, req.PageSize)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Invalid input"})
+		return
 	}
 	c.JSON(200, gin.H{"product_list": productList})
 }

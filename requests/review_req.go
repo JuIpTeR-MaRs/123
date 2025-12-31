@@ -15,3 +15,9 @@ type GetReviewsReq struct {
 type DeleteReviewReq struct {
 	Id int64 `json:"review_id" binding:"required"`
 }
+
+type UpdateReviewReq struct {
+	Id      string `json:"-"` // 通过URL参数传递
+	Rating  int    `json:"rating" binding:"min=1,max=5"`
+	Comment string `json:"comment"`
+}

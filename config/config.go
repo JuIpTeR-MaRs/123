@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -83,7 +84,17 @@ var (
 func Init() {
 	// todo read the configs.json file
 	v := viper.New()
-	v.SetConfigFile("C:/Users/30408/Desktop/123/config/config.yaml")
+	// allow overriding the config file via CONFIG_PATH env var
+	if cfg := os.Getenv("CONFIG_PATH"); cfg != "" {
+		v.SetConfigFile(cfg)
+	} else {
+		v.SetConfigName("config")
+		v.SetConfigType("yaml")
+		// look in ./config and project root
+		v.AddConfigPath("./config")
+		v.AddConfigPath(".")
+	}
+
 	err := v.ReadInConfig()
 	if err != nil {
 		// todo log error to be handle with unity

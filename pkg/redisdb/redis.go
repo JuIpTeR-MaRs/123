@@ -23,8 +23,11 @@ func Init() {
 	})
 
 	_, err := RedisDb.Ping(RedisCtx).Result()
-	// todo 错误日志统一处理
+	// 如果 Redis 无法连接，记录错误但不要 panic，允许服务继续运行
 	if err != nil {
-		panic(err)
+		fmt.Println("redis ping failed:", err)
+		// 把客户端置空以便调用方检测
+		RedisDb = nil
+		return
 	}
 }

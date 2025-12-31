@@ -6,3 +6,7 @@ type CartItem struct {
 	ProductID int64 `gorm:"not null" json:"product_id"`
 	Quantity  int64 `gorm:"not null" json:"quantity"`
 }
+
+func (CartItem) TableName() string {
+	return "shopping_cart"
+}
